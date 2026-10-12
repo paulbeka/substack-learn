@@ -1,0 +1,3 @@
+# Install the src-layout package as well as its runtime dependencies.
+-e .
+

@@ -1,0 +1,10 @@
+[Unit]
+Description=Prepare French A1 lessons at 08:00 London time
+
+[Timer]
+OnCalendar=*-*-* 08:00:00 Europe/London
+Persistent=true
+Unit=french-story-bot.service
+
+[Install]
+WantedBy=timers.target

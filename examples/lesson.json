@@ -1,0 +1,25 @@
+{
+  "title_french": "Une table près de la fenêtre",
+  "title_english": "A Table by the Window",
+  "topic": "Finding a quiet table to write a postcard in a busy café",
+  "story_french": "Ce matin, Marie entre dans un petit café. Elle porte un sac bleu et une carte postale. Elle veut écrire à sa sœur. Mais le café est plein. Il y a des personnes à toutes les tables. Marie regarde autour d'elle. Elle ne trouve pas de place.\n\nUn homme près de la fenêtre voit Marie. Il montre une chaise libre à sa table. Marie sourit et demande : « Je peux m'asseoir ici ? » L'homme répond : « Oui, bien sûr ! » Marie pose son sac et commande un café. Elle cherche un stylo dans son sac, mais elle ne trouve rien.\n\nL'homme a deux stylos. Il donne un stylo à Marie. Elle le remercie et écrit sa carte. Sa sœur habite loin, dans une autre ville. Marie raconte sa matinée au café. Maintenant, sa carte est prête. Elle est contente. Elle rend le stylo et dit au revoir à son nouveau voisin.",
+  "translation_english": "This morning, Marie walks into a small café. She is carrying a blue bag and a postcard. She wants to write to her sister. But the café is full. There are people at all the tables. Marie looks around. She cannot find a seat.\n\nA man near the window sees Marie. He points to a free chair at his table. Marie smiles and asks, “Can I sit here?” The man replies, “Yes, of course!” Marie puts down her bag and orders a coffee. She looks for a pen in her bag, but she cannot find anything.\n\nThe man has two pens. He gives Marie a pen. She thanks him and writes her card. Her sister lives far away, in another town. Marie describes her morning at the café. Now her card is ready. She is happy. She returns the pen and says goodbye to her new neighbour.",
+  "vocabulary": [
+    {"french": "un petit café", "english": "a small café", "example_french": "Marie entre dans un petit café."},
+    {"french": "un sac bleu", "english": "a blue bag", "example_french": "Elle porte un sac bleu et une carte postale."},
+    {"french": "une carte postale", "english": "a postcard", "example_french": "Elle porte un sac bleu et une carte postale."},
+    {"french": "plein", "english": "full", "example_french": "Mais le café est plein."},
+    {"french": "la fenêtre", "english": "the window", "example_french": "Un homme près de la fenêtre voit Marie."},
+    {"french": "une chaise libre", "english": "a free chair", "example_french": "Il montre une chaise libre à sa table."},
+    {"french": "un stylo", "english": "a pen", "example_french": "Il donne un stylo à Marie."},
+    {"french": "loin", "english": "far away", "example_french": "Sa sœur habite loin, dans une autre ville."},
+    {"french": "au revoir", "english": "goodbye", "example_french": "Elle rend le stylo et dit au revoir à son nouveau voisin."}
+  ],
+  "grammar_title": "Il y a: saying what is there",
+  "grammar_explanation_english": "Il y a means 'there is' or 'there are'. The expression stays the same for one thing or several things. In the story, 'Il y a des personnes à toutes les tables' means 'There are people at all the tables'.",
+  "questions": [
+    {"question_french": "À qui Marie veut-elle écrire ?", "answer_french": "Elle veut écrire à sa sœur."},
+    {"question_french": "Où est la table de l'homme ?", "answer_french": "Elle est près de la fenêtre."},
+    {"question_french": "Que donne l'homme à Marie ?", "answer_french": "Il donne un stylo à Marie."}
+  ]
+}

@@ -1,0 +1,12 @@
+[Unit]
+Description=Prepare today's French A1 lesson
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=frenchbot
+WorkingDirectory=/opt/french-story-bot
+ExecStart=/opt/french-story-bot/.venv/bin/python -m french_bot.cli run-daily
+UMask=0077
+
