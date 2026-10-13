@@ -51,8 +51,13 @@ def render_markdown(lesson: Lesson, include_cta: bool = True) -> str:
     return "\n\n".join(rows) + "\n"
 
 
+def render_article(lesson: Lesson, include_cta: bool = True) -> str:
+    """Safe HTML fragment shared by exports, the dashboard, and rich-text copying."""
+    return markdown.markdown(render_markdown(lesson, include_cta), extensions=["tables"])
+
+
 def render_html(lesson: Lesson, include_cta: bool = True) -> str:
-    content = markdown.markdown(render_markdown(lesson, include_cta), extensions=["tables"])
+    content = render_article(lesson, include_cta)
     title = html.escape(lesson.title_french, quote=True)
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">

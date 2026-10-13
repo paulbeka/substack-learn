@@ -1,8 +1,34 @@
 # French A1 Daily Stories
 
-A Python app that prepares one French learning lesson per publication date. It generates a 120–180-word French story, an English translation, vocabulary, a grammar tip, and three questions with answers. Lessons are stored in SQLite and exported as JSON, Markdown and HTML for human review and manual Substack publication.
+A Python app that prepares one French learning lesson per publication date. It generates a 120–180-word French story, an English translation, vocabulary, a grammar tip, and three questions with answers. Lessons are stored in SQLite and exported as JSON, Markdown and HTML for human review and manual Substack publication. A private, mobile-friendly dashboard lets you browse, review and copy articles directly into Substack.
 
 Start with the instructions below. [CONTEXT.md](CONTEXT.md) explains the implementation and maintenance rules. The original scope is in [FRENCH_SUBSTACK_BUILD_GUIDE.md](FRENCH_SUBSTACK_BUILD_GUIDE.md).
+
+## Docker deployment and private dashboard
+
+On your Ubuntu VPS, use Docker Engine with the Compose plugin. From this project directory:
+
+```bash
+cp .env.example .env  # First setup only; preserve an existing .env.
+chmod 600 .env
+nano .env
+# Set OPENAI_API_KEY, DASHBOARD_USERNAME and a unique DASHBOARD_PASSWORD (16+ characters).
+docker compose up -d
+```
+
+The single container serves the dashboard and generates today's missing lesson at **08:00 London time**, with daylight-saving changes handled automatically. SQLite, articles and rotating application logs live in separate named volumes. A persistent daily job record and the existing database lock prevent duplicate automatic runs. Disable any old cron/systemd schedule for this project before enabling this deployment.
+
+By default the dashboard binds only to the VPS loopback address on port 8080. Open it privately from your computer using:
+
+```bash
+ssh -L 8080:127.0.0.1:8080 your-user@your-vps
+```
+
+Visit **http://localhost:8080** and enter the credentials from `.env`. For a domain, use your existing HTTPS reverse proxy and add its hostname to `DASHBOARD_ALLOWED_HOSTS`. `DASHBOARD_PORT` is configurable to avoid other apps' ports.
+
+The page shows today's article, a dated archive, validation and approval status, a manual generation button when today's lesson is missing, and **Copy Article** for rich HTML copying. **Mark reviewed** records approval using the existing checks. Substack publication remains manual.
+
+See **[DEPLOYMENT.md](DEPLOYMENT.md)** for the full DigitalOcean/Ubuntu setup, HTTPS proxy configuration, migration of existing host data, logs, backups, resource limits, failure recovery and updates. The deployment uses one web worker with a 384 MB memory limit and 0.75 CPU limit. Use the CLI instructions below when running without Docker; all CLI commands also work through `docker compose exec app python -m french_bot.cli ...`.
 
 ## Install on Windows
 
@@ -129,6 +155,8 @@ The generation API uses `responses.parse(..., text_format=Lesson)` and `output_p
 
 ## Schedule the daily job
 
+**Docker users:** the built-in scheduler already handles this. Do not also install the host schedules below; these are alternatives for CLI-only installations.
+
 On Windows, create a Task Scheduler task under your Windows account. Set a daily trigger, use the project directory as **Start in**, and set:
 
 - Program: `C:\Workspace\substack-learn\.venv\Scripts\python.exe`
@@ -181,6 +209,7 @@ python -m pip install -e '.[dev]'
 python -m pytest -q
 python -m ruff check .
 python -m ruff format --check .
+node --test tests/test_copy.cjs
 ```
 
 Tests run without API keys or external requests. They cover seven dated synthetic responses, validation, safe rendering, editor recovery, import revisions, cross-process locking, rerun recovery, API retries and the CLI. They do not certify the quality of seven or thirty live model-generated lessons. Those still need the real API and human review.

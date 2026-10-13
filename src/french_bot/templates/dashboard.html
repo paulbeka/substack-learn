@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>French Daily · Your reading room</title>
+  <link rel="stylesheet" href="/assets/dashboard.css">
+  <script src="/assets/dashboard.js" defer></script>
+</head>
+<body data-today="{{ today }}" data-has-today="{{ 'true' if record and selected == today else 'false' }}">
+  <header class="masthead">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">F.</span><span>French Daily<small>YOUR PRIVATE READING ROOM</small></span></a>
+    <span class="schedule">A little French, every day.<small>New lesson at 08:00 London time</small></span>
+  </header>
+  <div class="workspace">
+    <aside class="archive" aria-label="Article archive">
+      <div class="eyebrow">YOUR LIBRARY</div>
+      <a class="today-link" href="/">Today's lesson <span>↗</span></a>
+      <h2>Previous articles</h2>
+      <nav>
+        {% for item in archive %}
+        <a class="archive-item {% if item.publication_date == selected %}selected{% endif %}" href="/?day={{ item.publication_date }}&amp;page={{ page }}" {% if item.publication_date == selected %}aria-current="page"{% endif %}>
+          <time>{{ item.publication_date }}</time><span>{{ item.title }}</span><small>{{ item.status | replace('_', ' ') }}</small>
+        </a>
+        {% else %}<p class="muted">Your daily stories will appear here.</p>{% endfor %}
+      </nav>
+      <div class="pagination">
+        {% if page > 1 %}<a href="/?page={{ page - 1 }}&amp;day={{ selected }}">← Newer</a>{% endif %}
+        {% if archive | length == 50 %}<a href="/?page={{ page + 1 }}&amp;day={{ selected }}">Older →</a>{% endif %}
+      </div>
+      <p class="library-note">Made for a few quiet minutes.<br>Reviewed by you, published by you.</p>
+    </aside>
+    <main>
+      <div class="edition"><span class="eyebrow">{% if selected == today %}TODAY'S EDITION{% else %}FROM YOUR LIBRARY{% endif %}</span><time>{{ selected }}</time></div>
+      <div id="job-status" class="job-status" role="status" aria-live="polite">{% if busy %}Generating a lesson…{% elif job and job.status in ['failed', 'interrupted'] %}{{ job.message }}{% endif %}</div>
+      {% if record %}
+      <section class="toolbar" aria-label="Review and copy controls">
+        <div class="badges">
+          <span class="badge {% if record.report.passed %}good{% else %}review{% endif %}">{{ 'Checks passed' if record.report.passed else 'Needs review' }}</span>
+          <span class="badge">{{ 'Approved' if record.approved_at else 'Awaiting approval' }}</span>
+        </div>
+        <div class="actions">
+          {% if not record.approved_at %}<button class="secondary" id="approve-button" data-day="{{ selected }}">Mark reviewed</button>{% endif %}
+          <button id="copy-button">Copy Article <span aria-hidden="true">↗</span></button>
+        </div>
+      </section>
+      <p id="copy-status" class="copy-status" role="status" aria-live="polite">Copies formatted text for Substack. Publication stays in your hands.</p>
+      <article id="article" class="article">{{ article }}</article>
+      <details class="review-details">
+        <summary>Review details · {{ record.report.word_count }} French words</summary>
+        <p>Publication date: {{ record.publication_date }}<br>Generated: {{ record.created_at }}<br>State: {{ record.status | replace('_', ' ') }}{% if record.approved_at %}<br>Approved: {{ record.approved_at }}{% endif %}</p>
+        {% for message in record.report.errors + record.report.warnings %}<p>{{ message }}</p>{% endfor %}
+        {% if record.report.editor_error %}<p>{{ record.report.editor_error }}</p>{% endif %}
+        {% if record.report.editor %}
+          {% for message in record.report.editor.issues %}<p>{{ message }}</p>{% endfor %}
+          {% for key, value in record.report.editor.model_dump().items() %}{% if value is sameas false %}<p>Editor check failed: {{ key | replace('_', ' ') }}.</p>{% endif %}{% endfor %}
+        {% endif %}
+      </details>
+      {% else %}
+      <section class="empty-state">
+        <span class="empty-mark" aria-hidden="true">Bonjour.</span>
+        <h1>{% if selected == today %}A fresh story is on its way.{% else %}No article for this date.{% endif %}</h1>
+        <p>{% if selected == today %}Your next small step in French arrives at 8 AM London time. You can also prepare today's lesson now.{% else %}Choose a saved article from your library, or return to today's lesson.{% endif %}</p>
+        {% if selected == today %}<button id="generate-button" {% if busy %}disabled{% endif %}>{{ 'Generating…' if busy else 'Generate today’s lesson' }}</button><p class="muted">Uses your configured OpenAI API account.</p>{% else %}<a href="/">Go to today's lesson →</a>{% endif %}
+      </section>
+      {% endif %}
+      <footer>FRENCH A1 · ENGLISH REFERENCE · ONE STORY AT A TIME</footer>
+    </main>
+  </div>
+</body>
+</html>

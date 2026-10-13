@@ -14,8 +14,34 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - run: python -m pip install -r requirements.lock
       - run: python -m pip install --no-deps -e .
       - run: python -m pytest -q
       - run: python -m ruff check .
       - run: python -m ruff format --check .
+      - run: node --test tests/test_copy.cjs
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare isolated test configuration
+        run: |
+          cp .env.example .env
+          echo 'DASHBOARD_PASSWORD=ci-test-password-not-a-production-secret' >> .env
+      - run: docker compose config --quiet
+      - run: docker compose build
+      - name: Start and check the private dashboard
+        run: |
+          docker compose up -d --wait
+          curl --fail http://127.0.0.1:8080/healthz
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/)" = 401
+          curl --fail -u admin:ci-test-password-not-a-production-secret http://127.0.0.1:8080/ > /dev/null
+          docker compose exec -T app python -c "from pathlib import Path; Path('/app/data/persistence-probe').write_text('ok')"
+          docker compose down
+          docker compose up -d --wait
+          docker compose exec -T app python -c "from pathlib import Path; assert Path('/app/data/persistence-probe').read_text() == 'ok'"
+      - if: always()
+        run: docker compose down -v

@@ -1,0 +1,41 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    init: true
+    env_file:
+      - .env
+    environment:
+      TZ: Europe/London
+      DATABASE_PATH: /app/data/stories.sqlite3
+      OUTPUT_DIR: /app/output
+      LOG_DIR: /app/logs
+      PUBLISH_MODE: local
+      SCHEDULER_ENABLED: "true"
+    ports:
+      - "${DASHBOARD_BIND_ADDRESS:-127.0.0.1}:${DASHBOARD_PORT:-8080}:8080"
+    volumes:
+      - stories_data:/app/data
+      - stories_output:/app/output
+      - stories_logs:/app/logs
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 384m
+    cpus: 0.75
+    pids_limit: 80
+    stop_grace_period: 5m
+    logging:
+      driver: json-file
+      options:
+        max-size: "2m"
+        max-file: "3"
+
+volumes:
+  stories_data:
+  stories_output:
+  stories_logs:

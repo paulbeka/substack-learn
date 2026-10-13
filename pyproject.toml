@@ -10,16 +10,20 @@ requires-python = ">=3.11"
 dependencies = [
   "openai>=2.0,<3", "pydantic>=2.0,<3", "python-dotenv>=1.0,<2",
   "Markdown>=3.0,<4", "filelock>=3.0,<4", "langdetect==1.0.9", "tzdata>=2025.1",
+  "fastapi>=0.115,<1", "uvicorn>=0.34,<1", "Jinja2>=3.1,<4",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8,<10", "ruff>=0.11,<1"]
+dev = ["pytest>=8,<10", "ruff>=0.11,<1", "PyYAML>=6,<7"]
 
 [project.scripts]
 french-bot = "french_bot.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+french_bot = ["templates/*.html", "static/*.css", "static/*.js"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

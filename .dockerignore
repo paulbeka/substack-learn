@@ -1,0 +1,12 @@
+**
+!Dockerfile
+!pyproject.toml
+!requirements.runtime.lock
+!src/
+!src/french_bot/
+!src/french_bot/*.py
+!src/french_bot/templates/
+!src/french_bot/templates/*.html
+!src/french_bot/static/
+!src/french_bot/static/*.css
+!src/french_bot/static/*.js

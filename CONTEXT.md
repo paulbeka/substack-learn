@@ -4,7 +4,7 @@ This file is the implementation handoff for future development. Read [README.md]
 
 ## Implemented scope
 
-French-only, English-reference lessons; one lesson per publication date; OpenAI generation and optional model editing; deterministic validation; SQLite history and review state; JSON/Markdown/HTML exports; manual review and corrections; resumable batches of up to 30 days; daily scheduling examples. Substack is a manual destination. There is no dashboard, subscriber database, browser automation, automatic publication, payment system or outbound notification integration.
+French-only, English-reference lessons; one lesson per publication date; OpenAI generation and optional model editing; deterministic validation; SQLite history and review state; JSON/Markdown/HTML exports; manual review and corrections; resumable batches of up to 30 days; a private FastAPI/Jinja2 dashboard; and a Docker deployment with daily London scheduling. Substack is a manual destination. There is no subscriber database, browser automation, automatic publication, payment system or outbound notification integration. Read [DEPLOYMENT.md](DEPLOYMENT.md) for the VPS runbook.
 
 ## Data flow
 
@@ -35,6 +35,10 @@ CLI -> .env + environment -> SQLite + OS-backed file lock
 | `service.py` | Two-attempt generation, editor fallback, validation, approval and import orchestration |
 | `publisher.py` | `Publisher.publish(StoredLesson) -> PublishResult`; only `LocalPublisher` exists |
 | `cli.py` | Commands, whole-command locking, redacted logs, exit codes |
+| `dashboard.py` | Basic authentication, CSRF-protected mutations, archive/article rendering, lifespan and rotating logs |
+| `scheduler.py` | Single background worker, persistent daily claims, 08:00 London polling and crash recovery |
+| `templates/dashboard.html` | Autoescaped private reading room; only the escaped article renderer returns trusted markup |
+| `static/dashboard.js` | Rich HTML + text copying, explicit selection fallback, generation polling and approval |
 
 ## Storage and state
 
@@ -76,7 +80,23 @@ The SDK handles transient connection/rate-limit/server errors with bounded backo
 
 Local validation and import require no key. An explicit `validate --editor` does require one. A failed requested editor recheck leaves the existing stored row unchanged. Automatic generation-time editor failure retains the newly generated row as `needs_review`.
 
-The lockfile contains pinned runtime and development dependencies; the editable project itself is installed separately. `tzdata` supports IANA timezones on Windows. Scheduling examples are supplied, not installed. Cron follows server time, while the supplied systemd timer explicitly uses Europe/London. Alerts are delegated to a monitoring service watching nonzero exit codes. This is a single-host design with local storage; avoid network filesystems or multiple independently configured database copies.
+`requirements.lock` contains pinned runtime and development dependencies. `requirements.runtime.lock` excludes development tools for the Docker image. Regenerate both from the installed environment using `scripts/lock_dependencies.py`. The project is installed separately. `tzdata` supports IANA timezones on Windows. Docker starts the built-in scheduler; the older host cron/systemd examples are alternatives, not additional schedules. Alerts are delegated to a monitoring service watching failures. This is a single-host design with local storage; avoid network filesystems or independently configured database copies.
+
+## Dashboard and Docker architecture
+
+`create_app()` reads existing pipeline settings, then requires a dashboard username and password (16+ characters). The CLI still works without dashboard credentials. One Uvicorn process serves HTTP and one `ThreadPoolExecutor` worker handles generation. The scheduler submits at/after 08:00 Europe/London, polling every 30 seconds, with UTC offsets calculated using `zoneinfo` on each tick. Startup after 08:00 catches up today only.
+
+`generation_runs` is an additive table keyed by publication date. A worker acquires the same database file lock used by the CLI, checks for an existing lesson, and commits a `running` claim before making API calls. Automatic work never retries any recorded attempt. Repeated manual clicks cannot queue an unlimited number of jobs; an active future rejects further submissions. Failures become `failed`, and abandoned claims become `interrupted` during startup recovery under the lock. An explicit manual retry may reclaim failed/interrupted/running claims only after obtaining that lock, which proves a previous generator is no longer active. A model request may have been billed before a crash; this is not an exactly-once guarantee for external API calls.
+
+The dashboard reads articles directly from SQLite and the shared deterministic `render_article()` function, not arbitrary filesystem paths. The archive reads only 50 metadata rows per page. It defaults to today's lesson even when only older lessons exist. The approval endpoint calls the existing service without silently accepting editor issues. CLI imports, validation, batches and explicit editor overrides remain available inside the container.
+
+Every article, status and asset route requires HTTP Basic authentication. Only `/healthz` is public and returns a constant liveness result. Mutation requests also require a randomly generated per-process CSRF token obtained from an authenticated page; no CORS access is enabled. A restart invalidates tokens in already-open pages. Hostnames are allowlisted, OpenAPI/docs routes are disabled, private responses are not cached, and CSP prevents scripts or frames from generated text. Only the two bundled JS/CSS files are exposed as assets. There is no file server for `.env`, SQLite, exports or logs.
+
+Copying starts synchronously from the user's button click and writes an article-only `text/html` Blob alongside `text/plain`. Both use the already escaped deterministic content. On unsupported/denied clipboard access, a temporary copy-event handler attempts rich copy, then leaves the article selected with accurate manual-copy instructions. HTTPS or trusted localhost is required for the modern Clipboard API. Authentication and copy compatibility should be tested in the user's target browser and Substack preview.
+
+Compose runs one non-root container with a read-only root filesystem, writable named data/output/log volumes, a small temporary filesystem, dropped capabilities and resource limits. It receives `.env` at runtime; the build context is allowlisted and excludes all credentials and generated data. It binds the configurable port to loopback by default for an existing HTTPS proxy or SSH tunnel. A slim multistage image contains the installed package including templates/assets, but no dev tooling. Rotating application logs persist on their own volume. Do not add multiple replicas/workers or a second host scheduler.
+
+The Dockerfile/Compose contracts, dashboard auth/CSRF/escaping, persistent claim behavior and DST boundary cases have offline tests. Node tests cover both clipboard MIME types and denial fallbacks. A local headless Edge check verified authentication, actual rich HTML clipboard content, approval, archive navigation, empty state and a 390-pixel mobile layout without horizontal overflow. Wheel inspection verified templates and static assets are packaged. No live OpenAI or Substack requests were made. CI includes an actual Docker build and volume-recreation smoke test; Docker was unavailable in the local implementation environment, so that container execution remains to be verified in CI or on the VPS.
 
 ## Validation performed during implementation
 

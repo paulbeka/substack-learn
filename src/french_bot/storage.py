@@ -65,6 +65,11 @@ class Storage:
                     publication_date TEXT NOT NULL, previous_row_json TEXT NOT NULL,
                     replaced_at TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS generation_runs (
+                    publication_date TEXT PRIMARY KEY,
+                    status TEXT NOT NULL CHECK(status IN ('running','succeeded','failed','interrupted')),
+                    started_at TEXT NOT NULL, finished_at TEXT, message TEXT NOT NULL
+                );
             """)
 
     @contextmanager
@@ -108,6 +113,60 @@ class Storage:
                 self.decode(row)
                 for row in db.execute("SELECT * FROM lessons ORDER BY publication_date")
             ]
+
+    def archive(self, page: int = 1, size: int = 50) -> list[dict]:
+        """Read only sidebar metadata, not every full lesson in the database."""
+        with self.connect() as db:
+            return [
+                dict(row)
+                for row in db.execute(
+                    "SELECT publication_date, title, status FROM lessons "
+                    "ORDER BY publication_date DESC LIMIT ? OFFSET ?",
+                    (size, (page - 1) * size),
+                )
+            ]
+
+    def run_status(self, day: str) -> dict | None:
+        with self.connect() as db:
+            row = db.execute(
+                "SELECT * FROM generation_runs WHERE publication_date=?", (day,)
+            ).fetchone()
+        return dict(row) if row else None
+
+    def claim_run(self, day: str, manual: bool) -> bool:
+        """Caller holds the shared file lock across claim, model work and completion."""
+        with self.connect() as db:
+            previous = db.execute(
+                "SELECT status FROM generation_runs WHERE publication_date=?", (day,)
+            ).fetchone()
+            if previous and (
+                not manual or previous["status"] not in {"failed", "interrupted", "running"}
+            ):
+                return False
+            db.execute(
+                "INSERT INTO generation_runs VALUES (?, 'running', ?, NULL, 'Generating lesson.') "
+                "ON CONFLICT(publication_date) DO UPDATE SET status='running', started_at=excluded.started_at, "
+                "finished_at=NULL, message=excluded.message",
+                (day, utc_now()),
+            )
+        return True
+
+    def finish_run(self, day: str, status: str, message: str):
+        with self.connect() as db:
+            db.execute(
+                "UPDATE generation_runs SET status=?, message=?, finished_at=? WHERE publication_date=?",
+                (status, message, utc_now(), day),
+            )
+
+    def recover_runs(self):
+        """Only call while holding the shared lock: no generator can still be active."""
+        with self.connect() as db:
+            db.execute(
+                "UPDATE generation_runs SET status='interrupted', finished_at=?, "
+                "message='The process stopped. Check the saved article before retrying.' "
+                "WHERE status='running'",
+                (utc_now(),),
+            )
 
     def history(self, exclude_date: str) -> list[HistoryItem]:
         with self.connect() as db:

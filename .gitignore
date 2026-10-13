@@ -4,10 +4,13 @@
 .venv/
 data/
 output/
+logs/
+backups/
 *.log
 *.sqlite3*
 *.lock
 !requirements.lock
+!requirements.runtime.lock
 __pycache__/
 *.py[cod]
 *.egg-info/
